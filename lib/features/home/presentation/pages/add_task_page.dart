@@ -8,7 +8,13 @@ class AddTaskPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Task')),
+      appBar: AppBar(
+        title: const Text('Add Task'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -19,7 +25,7 @@ class AddTaskPage extends StatelessWidget {
             ),
             const SizedBox(height: 40),
             ElevatedButton.icon(
-              onPressed: () => context.goNamed(AppRoutes.voiceTask),
+              onPressed: () => context.go(AppPaths.home),
               icon: const Icon(Icons.mic),
               label: const Text('Add Task with Voice'),
               style: ElevatedButton.styleFrom(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:task_manager/config/theme/app_colors.dart';
 import 'package:task_manager/core/services/audio_recorder_service.dart';
 import 'package:task_manager/core/services/whisper_service.dart';
+import 'package:task_manager/features/home/presentation/widgets/action_button.dart';
 
 class VoiceTaskPage extends StatefulWidget {
   const VoiceTaskPage({super.key});
@@ -9,29 +11,30 @@ class VoiceTaskPage extends StatefulWidget {
   State<VoiceTaskPage> createState() => _VoiceTaskPageState();
 }
 
-class _VoiceTaskPageState extends State<VoiceTaskPage> with SingleTickerProviderStateMixin {
+class _VoiceTaskPageState extends State<VoiceTaskPage>
+    with SingleTickerProviderStateMixin {
   final AudioRecorderService _recorderService = AudioRecorderService();
   final WhisperService _whisperService = WhisperService.instance;
 
   bool _isRecording = false;
   bool _isTranscribing = false;
   bool _isInitializing = false;
-  bool _isPlaying = false;
+  int _transcriptionProgress = 0;
   String _transcription = '';
   String? _recordingPath;
 
   late AnimationController _animationController;
-  late Animation<double> _pulseAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
@@ -76,7 +79,8 @@ class _VoiceTaskPageState extends State<VoiceTaskPage> with SingleTickerProvider
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to start recording. Please check microphone permissions.'),
+            content: Text('Failed to start recording'),
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -97,72 +101,35 @@ class _VoiceTaskPageState extends State<VoiceTaskPage> with SingleTickerProvider
   Future<void> _transcribeAudio(String audioPath) async {
     setState(() {
       _isTranscribing = true;
+      _transcriptionProgress = 0;
     });
 
-    final transcription = await _whisperService.transcribe(audioPath);
+    final transcription = await _whisperService.transcribe(
+      audioPath,
+      onProgress: (progress) {
+        if (mounted) {
+          setState(() {
+            _transcriptionProgress = progress;
+          });
+        }
+      },
+    );
 
     if (mounted) {
       setState(() {
         _isTranscribing = false;
+        _transcriptionProgress = 100;
         _transcription = transcription ?? 'Failed to transcribe audio';
       });
 
       if (transcription == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to transcribe audio. Please try again.'),
+            content: Text('Failed to transcribe audio'),
+            backgroundColor: AppColors.error,
           ),
         );
       }
-    }
-  }
-
-  Future<void> _togglePlayback() async {
-    if (_recordingPath == null) return;
-
-    if (_isPlaying) {
-      await _recorderService.stopAudio();
-      setState(() {
-        _isPlaying = false;
-      });
-    } else {
-      await _recorderService.playAudio(_recordingPath!);
-      setState(() {
-        _isPlaying = true;
-      });
-
-      // Auto-stop after playback finishes
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted && !_recorderService.isPlaying()) {
-          setState(() {
-            _isPlaying = false;
-          });
-        }
-      });
-    }
-  }
-
-  Future<void> _createTask() async {
-    if (_transcription.isEmpty || _transcription == 'Failed to transcribe audio') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please record and transcribe your task first.'),
-        ),
-      );
-      return;
-    }
-
-    // TODO: Implement task creation logic with repository
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Task created: $_transcription'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      // Navigate back
-      Navigator.of(context).pop();
     }
   }
 
@@ -173,158 +140,145 @@ class _VoiceTaskPageState extends State<VoiceTaskPage> with SingleTickerProvider
     super.dispose();
   }
 
-  Widget _buildDownloadingUI() {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.deepPurple.withOpacity(0.1),
-              blurRadius: 30,
-              spreadRadius: 5,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Animated brain icon
-            ScaleTransition(
-              scale: _pulseAnimation,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.deepPurple.shade400,
-                      Colors.deepPurple.shade700,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+  Widget _buildRecordButton() {
+    return GestureDetector(
+      onTap: _isTranscribing || _isInitializing ? null : _toggleRecording,
+      child: AnimatedBuilder(
+        animation: _animationController,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _isRecording ? _scaleAnimation.value : 1.0,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.backgroundDark,
+                boxShadow: [
+                  BoxShadow(
+                    color: _isRecording
+                        ? AppColors.accent.withOpacity(0.4)
+                        : Colors.black.withOpacity(0.2),
+                    blurRadius: _isRecording ? 30 : 20,
+                    spreadRadius: _isRecording ? 10 : 5,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.deepPurple.withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.psychology,
-                  size: 60,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-
-            // Progress indicator
-            SizedBox(
-              width: 250,
-              child: Column(
-                children: [
-                  LinearProgressIndicator(
-                    backgroundColor: Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Colors.deepPurple.shade400,
-                    ),
-                    minHeight: 8,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  const SizedBox(height: 16),
                 ],
               ),
-            ),
-
-            // Title
-            Text(
-              'Downloading AI Model',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[800],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Description
-            Text(
-              'Setting up Whisper Small Model',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-
-            // Model size info
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.deepPurple.shade50,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.cloud_download,
-                    size: 18,
-                    color: Colors.deepPurple.shade700,
-                  ),
-                  const SizedBox(width: 8),
                   Text(
-                    '~465 MB • First time only',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.deepPurple.shade700,
+                    _isRecording ? '' : 'Hi,Parisa!',
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Additional info
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade200, width: 1),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 20,
-                    color: Colors.blue.shade700,
-                  ),
-                  const SizedBox(width: 12),
-                  Flexible(
-                    child: Text(
-                      'This happens only once.\nFuture uses will be instant!',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.blue.shade900,
-                        height: 1.4,
-                      ),
-                      textAlign: TextAlign.center,
+                  const SizedBox(height: 12),
+                  Text(
+                    _isRecording ? 'Recording...' : 'Tap to Start',
+                    style: const TextStyle(
+                      color: AppColors.textLight,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  // Audio wave animation
+                  if (_isRecording)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        return AnimatedContainer(
+                          duration: Duration(milliseconds: 300 + (index * 100)),
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          width: 4,
+                          height: 20 + (index % 3) * 10,
+                          decoration: BoxDecoration(
+                            color: AppColors.accent,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        );
+                      }),
+                    )
+                  else
+                    Icon(
+                      Icons.graphic_eq,
+                      size: 40,
+                      color: AppColors.accent.withOpacity(0.5),
+                    ),
                 ],
               ),
             ),
-          ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTranscribingOverlay() {
+    return Container(
+      color: AppColors.backgroundDarker.withOpacity(0.95),
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: AppColors.backgroundDark,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.auto_awesome,
+                size: 60,
+                color: AppColors.accent,
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Transcribing Audio...',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textLight,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: 250,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: _transcriptionProgress / 100,
+                    backgroundColor: AppColors.accentDark,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      AppColors.accent,
+                    ),
+                    minHeight: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '$_transcriptionProgress%',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.accent,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'AI is processing your voice...',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textLight,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -333,181 +287,171 @@ class _VoiceTaskPageState extends State<VoiceTaskPage> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.backgroundDarker,
       appBar: AppBar(
-        title: const Text('Voice Task'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: AppColors.backgroundDarker,
+        elevation: 0,
+        title: const Text(
+          'AI Voice Recorder',
+          style: TextStyle(
+            color: AppColors.textLight,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.settings_outlined,
+              color: AppColors.textLight,
+            ),
+            onPressed: () {},
+          ),
+        ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_isInitializing)
-                _buildDownloadingUI()
-              else ...[
-                const Icon(
-                  Icons.mic,
-                  size: 80,
-                  color: Colors.deepPurple,
+      body: Stack(
+        children: [
+          // Main content
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(),
+                _buildRecordButton(),
+                const Spacer(),
+                // Bottom action buttons
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ActionButton(
+                        iconPath: 'assets/icons/upload.svg',
+                        label: 'Upload Audio',
+                        onTap: null, // Disabled as per requirements
+                      ),
+                      const SizedBox(width: 32),
+                      ActionButton(
+                        iconPath: 'assets/icons/music-library-2.svg',
+                        label: 'Records',
+                        onTap: null, // Disabled as per requirements
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  _isRecording
-                      ? 'Recording...'
-                      : _isTranscribing
-                          ? 'Transcribing...'
-                          : 'Tap to record your task',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-                Center(
-                  child: GestureDetector(
-                    onTap: _isTranscribing ? null : _toggleRecording,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _isRecording ? Colors.red : Colors.deepPurple,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (_isRecording ? Colors.red : Colors.deepPurple)
-                                .withOpacity(0.3),
-                            blurRadius: 20,
-                            spreadRadius: 5,
+              ],
+            ),
+          ),
+          // Transcribing overlay
+          if (_isTranscribing) _buildTranscribingOverlay(),
+          // Result overlay
+          if (_transcription.isNotEmpty && !_isTranscribing)
+            Container(
+              color: AppColors.backgroundDarker.withOpacity(0.95),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Transcription Result',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textLight,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.close,
+                              color: AppColors.textLight,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _transcription = '';
+                                _recordingPath = null;
+                              });
+                            },
                           ),
                         ],
                       ),
-                      child: Icon(
-                        _isRecording ? Icons.stop : Icons.mic,
-                        size: 60,
-                        color: Colors.white,
+                      const SizedBox(height: 24),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.backgroundDark,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: SingleChildScrollView(
+                            child: Text(
+                              _transcription,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: AppColors.textLight,
+                                height: 1.6,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        onPressed: () {
+                          // TODO: Save transcription
+                          Navigator.of(context).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: AppColors.textOnAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Save Task',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            _transcription = '';
+                            _recordingPath = null;
+                          });
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          side: const BorderSide(color: AppColors.accent),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Record Again',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 40),
-                if (_isTranscribing)
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.deepPurple.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.deepPurple.shade200,
-                        width: 2,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          size: 48,
-                          color: Colors.deepPurple.shade700,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Transcribing Audio...',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.deepPurple.shade900,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            backgroundColor: Colors.grey[300],
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.deepPurple.shade600,
-                            ),
-                            minHeight: 8,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'AI is processing your voice...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                if (_transcription.isNotEmpty && !_isTranscribing) ...[
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Transcription:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            if (_recordingPath != null)
-                              IconButton(
-                                onPressed: _togglePlayback,
-                                icon: Icon(
-                                  _isPlaying ? Icons.stop : Icons.play_arrow,
-                                ),
-                                color: Colors.deepPurple,
-                                tooltip: _isPlaying ? 'Stop' : 'Play recording',
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _transcription,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: _createTask,
-                    icon: const Icon(Icons.check),
-                    label: const Text('Create Task'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _transcription = '';
-                        _recordingPath = null;
-                      });
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Record Again'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-                ],
-              ],
-            ],
-          ),
-        ),
+              ),
+            ),
+        ],
       ),
     );
   }

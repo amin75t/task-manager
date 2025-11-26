@@ -47,7 +47,11 @@ class WhisperService {
     }
   }
 
-  Future<String?> transcribe(String audioPath, {String? language}) async {
+  Future<String?> transcribe(
+    String audioPath, {
+    String? language,
+    Function(int progress)? onProgress,
+  }) async {
     if (!_isInitialized) {
       final initialized = await initialize();
       if (!initialized) {
@@ -56,6 +60,12 @@ class WhisperService {
     }
 
     try {
+      // Start simulated progress updates
+      bool isCompleted = false;
+      if (onProgress != null) {
+        _simulateProgress(onProgress, () => isCompleted);
+      }
+
       // Try without language first to let Whisper auto-detect
       final response = await _whisper!.transcribe(
         transcribeRequest: TranscribeRequest(
@@ -67,12 +77,44 @@ class WhisperService {
         ),
       );
 
+      // Mark as completed to stop progress simulation
+      isCompleted = true;
+
       // Extract text from WhisperTranscribeResponse
       return response.text.trim();
     } catch (e) {
       print('Transcription error: $e');
       return null;
     }
+  }
+
+  // Simulate progress since the package doesn't provide real progress
+  Future<void> _simulateProgress(
+    Function(int progress) onProgress,
+    bool Function() isCompleted,
+  ) async {
+    int progress = 0;
+    while (progress < 95 && !isCompleted()) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (progress < 30) {
+        progress += 5;
+      } else if (progress < 60) {
+        progress += 3;
+      } else if (progress < 90) {
+        progress += 2;
+      } else {
+        progress += 1;
+      }
+      if (!isCompleted()) {
+        onProgress(progress);
+      }
+    }
+
+    // Wait for completion and set to 100%
+    while (!isCompleted()) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    onProgress(100);
   }
 
   void dispose() {

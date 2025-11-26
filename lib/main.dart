@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:task_manager/config/router.dart';
+import 'package:task_manager/config/theme/app_theme.dart';
 import 'package:task_manager/locator.dart';
 
 void main() async {
@@ -19,10 +20,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Task Manager',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system, // Follows system theme
       routerConfig: appRouter,
     );
   }
