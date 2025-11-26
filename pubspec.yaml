@@ -38,7 +38,7 @@ dependencies:
 
   # Voice to text dependencies
   whisper_flutter_new: ^1.0.1
-  record: ^5.1.2
+  flutter_sound: ^9.16.3
   path_provider: ^2.1.5
   permission_handler: ^11.3.1
 

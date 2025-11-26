@@ -9,19 +9,32 @@ class VoiceTaskPage extends StatefulWidget {
   State<VoiceTaskPage> createState() => _VoiceTaskPageState();
 }
 
-class _VoiceTaskPageState extends State<VoiceTaskPage> {
+class _VoiceTaskPageState extends State<VoiceTaskPage> with SingleTickerProviderStateMixin {
   final AudioRecorderService _recorderService = AudioRecorderService();
   final WhisperService _whisperService = WhisperService.instance;
 
   bool _isRecording = false;
   bool _isTranscribing = false;
   bool _isInitializing = false;
+  bool _isPlaying = false;
   String _transcription = '';
   String? _recordingPath;
+
+  late AnimationController _animationController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
     _initializeWhisper();
   }
 
@@ -104,6 +117,31 @@ class _VoiceTaskPageState extends State<VoiceTaskPage> {
     }
   }
 
+  Future<void> _togglePlayback() async {
+    if (_recordingPath == null) return;
+
+    if (_isPlaying) {
+      await _recorderService.stopAudio();
+      setState(() {
+        _isPlaying = false;
+      });
+    } else {
+      await _recorderService.playAudio(_recordingPath!);
+      setState(() {
+        _isPlaying = true;
+      });
+
+      // Auto-stop after playback finishes
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted && !_recorderService.isPlaying()) {
+          setState(() {
+            _isPlaying = false;
+          });
+        }
+      });
+    }
+  }
+
   Future<void> _createTask() async {
     if (_transcription.isEmpty || _transcription == 'Failed to transcribe audio') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -130,8 +168,166 @@ class _VoiceTaskPageState extends State<VoiceTaskPage> {
 
   @override
   void dispose() {
+    _animationController.dispose();
     _recorderService.dispose();
     super.dispose();
+  }
+
+  Widget _buildDownloadingUI() {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.deepPurple.withOpacity(0.1),
+              blurRadius: 30,
+              spreadRadius: 5,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Animated brain icon
+            ScaleTransition(
+              scale: _pulseAnimation,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.deepPurple.shade400,
+                      Colors.deepPurple.shade700,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.deepPurple.withOpacity(0.3),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.psychology,
+                  size: 60,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Progress indicator
+            SizedBox(
+              width: 250,
+              child: Column(
+                children: [
+                  LinearProgressIndicator(
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.deepPurple.shade400,
+                    ),
+                    minHeight: 8,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+
+            // Title
+            Text(
+              'Downloading AI Model',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Description
+            Text(
+              'Setting up Whisper Small Model',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+
+            // Model size info
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.shade50,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.cloud_download,
+                    size: 18,
+                    color: Colors.deepPurple.shade700,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '~465 MB • First time only',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.deepPurple.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Additional info
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade200, width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 20,
+                    color: Colors.blue.shade700,
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      'This happens only once.\nFuture uses will be instant!',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.blue.shade900,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -149,20 +345,7 @@ class _VoiceTaskPageState extends State<VoiceTaskPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_isInitializing)
-                const Center(
-                  child: Column(
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('Initializing Whisper AI...'),
-                      SizedBox(height: 8),
-                      Text(
-                        'This may take a moment on first launch',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                )
+                _buildDownloadingUI()
               else ...[
                 const Icon(
                   Icons.mic,
@@ -208,8 +391,53 @@ class _VoiceTaskPageState extends State<VoiceTaskPage> {
                 ),
                 const SizedBox(height: 40),
                 if (_isTranscribing)
-                  const Center(
-                    child: CircularProgressIndicator(),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.deepPurple.shade200,
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.auto_awesome,
+                          size: 48,
+                          color: Colors.deepPurple.shade700,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Transcribing Audio...',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurple.shade900,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            backgroundColor: Colors.grey[300],
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.deepPurple.shade600,
+                            ),
+                            minHeight: 8,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'AI is processing your voice...',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 if (_transcription.isNotEmpty && !_isTranscribing) ...[
                   Container(
@@ -221,12 +449,26 @@ class _VoiceTaskPageState extends State<VoiceTaskPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Transcription:',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Transcription:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            if (_recordingPath != null)
+                              IconButton(
+                                onPressed: _togglePlayback,
+                                icon: Icon(
+                                  _isPlaying ? Icons.stop : Icons.play_arrow,
+                                ),
+                                color: Colors.deepPurple,
+                                tooltip: _isPlaying ? 'Stop' : 'Play recording',
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         Text(

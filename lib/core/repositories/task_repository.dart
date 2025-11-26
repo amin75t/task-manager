@@ -19,7 +19,7 @@ class TaskRepository {
   /// Add multiple tasks
   Future<void> addTasks(List<TaskModel> tasks) async {
     final Map<String, TaskModel> taskMap = {
-      for (var task in tasks) task.id: task
+      for (var task in tasks) task.id: task,
     };
     await _box.putAll(taskMap);
   }
@@ -69,10 +69,12 @@ class TaskRepository {
     final tomorrow = today.add(const Duration(days: 1));
 
     return _box.values
-        .where((task) =>
-            task.dueDate != null &&
-            task.dueDate!.isAfter(today) &&
-            task.dueDate!.isBefore(tomorrow))
+        .where(
+          (task) =>
+              task.dueDate != null &&
+              task.dueDate!.isAfter(today) &&
+              task.dueDate!.isBefore(tomorrow),
+        )
         .toList();
   }
 
@@ -80,10 +82,12 @@ class TaskRepository {
   List<TaskModel> getOverdueTasks() {
     final now = DateTime.now();
     return _box.values
-        .where((task) =>
-            task.dueDate != null &&
-            task.dueDate!.isBefore(now) &&
-            !task.isCompleted)
+        .where(
+          (task) =>
+              task.dueDate != null &&
+              task.dueDate!.isBefore(now) &&
+              !task.isCompleted,
+        )
         .toList();
   }
 
@@ -91,18 +95,22 @@ class TaskRepository {
   List<TaskModel> searchTasks(String query) {
     final lowerQuery = query.toLowerCase();
     return _box.values
-        .where((task) =>
-            task.title.toLowerCase().contains(lowerQuery) ||
-            (task.description?.toLowerCase().contains(lowerQuery) ?? false))
+        .where(
+          (task) =>
+              task.title.toLowerCase().contains(lowerQuery) ||
+              (task.description?.toLowerCase().contains(lowerQuery) ?? false),
+        )
         .toList();
   }
 
   /// Get tasks sorted by creation date
   List<TaskModel> getTasksSortedByDate({bool ascending = false}) {
     final tasks = _box.values.toList();
-    tasks.sort((a, b) => ascending
-        ? a.createdAt.compareTo(b.createdAt)
-        : b.createdAt.compareTo(a.createdAt));
+    tasks.sort(
+      (a, b) => ascending
+          ? a.createdAt.compareTo(b.createdAt)
+          : b.createdAt.compareTo(a.createdAt),
+    );
     return tasks;
   }
 
@@ -187,8 +195,10 @@ class TaskRepository {
 
   /// Delete all completed tasks
   Future<void> deleteCompletedTasks() async {
-    final completedIds =
-        _box.values.where((task) => task.isCompleted).map((e) => e.id).toList();
+    final completedIds = _box.values
+        .where((task) => task.isCompleted)
+        .map((e) => e.id)
+        .toList();
     await _box.deleteAll(completedIds);
   }
 
@@ -224,7 +234,7 @@ class TaskRepository {
   Map<TaskPriority, int> getCountByPriority() {
     return {
       for (var priority in TaskPriority.values)
-        priority: _box.values.where((task) => task.priority == priority).length
+        priority: _box.values.where((task) => task.priority == priority).length,
     };
   }
 

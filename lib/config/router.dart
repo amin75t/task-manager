@@ -66,9 +66,7 @@ class ErrorPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Error')),
-      body: const Center(
-        child: Text('Page not found'),
-      ),
+      body: const Center(child: Text('Page not found')),
     );
   }
 }

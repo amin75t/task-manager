@@ -33,8 +33,9 @@ class WhisperService {
 
     try {
       _whisper = Whisper(
-        model: WhisperModel.medium,
-        downloadHost: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main",
+        model: WhisperModel.small,  // Using small model for better Persian accuracy
+        downloadHost:
+            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main",
       );
 
       _isInitialized = true;
@@ -46,7 +47,7 @@ class WhisperService {
     }
   }
 
-  Future<String?> transcribe(String audioPath, {String language = 'fa'}) async {
+  Future<String?> transcribe(String audioPath, {String? language}) async {
     if (!_isInitialized) {
       final initialized = await initialize();
       if (!initialized) {
@@ -55,19 +56,21 @@ class WhisperService {
     }
 
     try {
+      // Try without language first to let Whisper auto-detect
       final response = await _whisper!.transcribe(
         transcribeRequest: TranscribeRequest(
           audio: audioPath,
           isTranslate: false,
           isNoTimestamps: true,
           splitOnWord: true,
-          language: language,
+          threads: 4,  // Use multiple threads for faster processing
         ),
       );
 
       // Extract text from WhisperTranscribeResponse
       return response.text.trim();
     } catch (e) {
+      print('Transcription error: $e');
       return null;
     }
   }
