@@ -20,26 +20,55 @@ class _HomePageState extends State<HomePage>
   bool _isRecording = false;
   bool _isTranscribing = false;
   bool _isInitializing = false;
+  bool _isPaused = false;
   int _transcriptionProgress = 0;
   String _transcription = '';
   String? _recordingPath;
+  int _recordingSeconds = 0;
 
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
+  AnimationController? _animationController;
+  Animation<double>? _scaleAnimation;
+  Animation<double>? _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    final controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
+    _animationController = controller;
+
     _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+      CurvedAnimation(parent: controller, curve: Curves.easeInOut),
+    );
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(parent: controller, curve: Curves.easeInOut),
     );
 
     _initializeWhisper();
+  }
+
+  void _startTimer() {
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 1));
+      if (_isRecording && !_isPaused && mounted) {
+        setState(() {
+          _recordingSeconds++;
+        });
+        return true;
+      }
+      return false;
+    });
+  }
+
+  String _formatDuration(int seconds) {
+    final hours = (seconds ~/ 3600).toString().padLeft(2, '0');
+    final minutes = ((seconds % 3600) ~/ 60).toString().padLeft(2, '0');
+    final secs = (seconds % 60).toString().padLeft(2, '0');
+    return '$hours : $minutes : $secs';
   }
 
   Future<void> _initializeWhisper() async {
@@ -75,7 +104,9 @@ class _HomePageState extends State<HomePage>
         _isRecording = true;
         _recordingPath = path;
         _transcription = '';
+        _recordingSeconds = 0;
       });
+      _startTimer();
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -86,6 +117,30 @@ class _HomePageState extends State<HomePage>
         );
       }
     }
+  }
+
+  Future<void> _togglePause() async {
+    if (_isPaused) {
+      await _recorderService.resumeRecording();
+      setState(() {
+        _isPaused = false;
+      });
+    } else {
+      await _recorderService.pauseRecording();
+      setState(() {
+        _isPaused = true;
+      });
+    }
+  }
+
+  Future<void> _cancelRecording() async {
+    await _recorderService.stopRecording();
+    setState(() {
+      _isRecording = false;
+      _isPaused = false;
+      _recordingSeconds = 0;
+      _recordingPath = null;
+    });
   }
 
   Future<void> _stopRecording() async {
@@ -136,19 +191,23 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _animationController?.dispose();
     _recorderService.dispose();
     super.dispose();
   }
 
   Widget _buildRecordButton() {
+    if (_isRecording) {
+      return _buildRecordingUI();
+    }
+
     return GestureDetector(
       onTap: _isTranscribing || _isInitializing ? null : _toggleRecording,
       child: AnimatedBuilder(
-        animation: _animationController,
+        animation: _animationController ?? AnimationController(vsync: this),
         builder: (context, child) {
           return Transform.scale(
-            scale: _isRecording ? _scaleAnimation.value : 1.0,
+            scale: 1.0,
             child: Container(
               width: 220,
               height: 220,
@@ -157,64 +216,121 @@ class _HomePageState extends State<HomePage>
                 color: AppColors.backgroundDark,
                 boxShadow: [
                   BoxShadow(
-                    color: _isRecording
-                        ? AppColors.accent.withOpacity(0.4)
-                        : Colors.black.withOpacity(0.2),
-                    blurRadius: _isRecording ? 30 : 20,
-                    spreadRadius: _isRecording ? 10 : 5,
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    spreadRadius: 5,
                   ),
                 ],
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    _isRecording ? '' : 'Hi',
-                    style: const TextStyle(
+                  const Text(
+                    'Hi',
+                    style: TextStyle(
                       color: AppColors.accent,
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    _isRecording ? 'Recording...' : 'Tap to Start',
-                    style: const TextStyle(
+                  const Text(
+                    'Tap to Start',
+                    style: TextStyle(
                       color: AppColors.textLight,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Audio wave animation
-                  if (_isRecording)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(5, (index) {
-                        return AnimatedContainer(
-                          duration: Duration(milliseconds: 300 + (index * 100)),
-                          margin: const EdgeInsets.symmetric(horizontal: 2),
-                          width: 4,
-                          height: 20 + (index % 3) * 10,
-                          decoration: BoxDecoration(
-                            color: AppColors.accent,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        );
-                      }),
-                    )
-                  else
-                    Icon(
-                      Icons.graphic_eq,
-                      size: 40,
-                      color: AppColors.accent.withOpacity(0.5),
-                    ),
+                  Icon(
+                    Icons.graphic_eq,
+                    size: 40,
+                    color: AppColors.accent.withOpacity(0.5),
+                  ),
                 ],
               ),
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildRecordingUI() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        Text(
+          _isPaused ? 'Paused' : 'Recording...',
+          style: TextStyle(
+            color: _isPaused ? AppColors.accent : AppColors.textLight,
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 60),
+        // Animated circular button with concentric circles
+        AnimatedBuilder(
+          animation: _animationController ?? AnimationController(vsync: this),
+          builder: (context, child) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                // Outer pulsing circles
+                for (int i = 3; i > 0; i--)
+                  Transform.scale(
+                    scale: 1.0 + (i * 0.15 * (_pulseAnimation?.value ?? 0.0)),
+                    child: Container(
+                      width: 220,
+                      height: 220,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.accent.withOpacity(0.3 / i),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                // Center button
+                const SizedBox(height: 60),
+                Container(
+                  width: 220,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.backgroundDark,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accent.withOpacity(0.3),
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.mic,
+                    size: 80,
+                    color: AppColors.textLight,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 180),
+        // Timer
+        Text(
+          _formatDuration(_recordingSeconds),
+          style: const TextStyle(
+            color: AppColors.textLight,
+            fontSize: 32,
+            fontWeight: FontWeight.w300,
+            letterSpacing: 2,
+          ),
+        ),
+      ],
     );
   }
 
@@ -304,32 +420,96 @@ class _HomePageState extends State<HomePage>
           ),
         ],
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.center,
+      body: Stack(
         children: [
-          SizedBox(height: 70,),
-          _buildRecordButton(),
-          SizedBox(height: 70,),
-          // Bottom action buttons
-          Padding(
-            padding: const EdgeInsets.only(bottom: 40),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ActionButton(
-                  iconPath: 'assets/icons/upload.svg',
-                  label: 'Upload Audio',
-                  onTap: null, // Disabled as per requirements
-                ),
-                const SizedBox(width: 32),
-                ActionButton(
-                  iconPath: 'assets/icons/music-library-2.svg',
-                  label: 'Records',
-                  onTap: null, // Disabled as per requirements
+          Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (_isRecording)
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Center(child: _buildRecordButton()),
+                      // Pause/Resume button (left)
+                      Positioned(
+                        left: 40,
+                        top: MediaQuery.of(context).size.height * 0.4,
+                        child: Column(
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                _isPaused ? Icons.play_arrow : Icons.pause,
+                                color: AppColors.textLight,
+                                size: 32,
+                              ),
+                              onPressed: _togglePause,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _isPaused ? 'Resume' : 'Pause',
+                              style: const TextStyle(
+                                color: AppColors.textLight,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Cancel button (right)
+                      Positioned(
+                        right: 40,
+                        top: MediaQuery.of(context).size.height * 0.4,
+                        child: Column(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.close,
+                                color: AppColors.textLight,
+                                size: 32,
+                              ),
+                              onPressed: _cancelRecording,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                color: AppColors.textLight,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
+                const SizedBox(height: 70),
+                _buildRecordButton(),
+                const SizedBox(height: 70),
+                // Bottom action buttons
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ActionButton(
+                        iconPath: 'assets/icons/upload.svg',
+                        label: 'Upload Audio',
+                        onTap: null, // Disabled as per requirements
+                      ),
+                      const SizedBox(width: 32),
+                      ActionButton(
+                        iconPath: 'assets/icons/music-library-2.svg',
+                        label: 'Records',
+                        onTap: null, // Disabled as per requirements
+                      ),
+                    ],
+                  ),
                 ),
               ],
-            ),
+            ],
           ),
           // Transcribing overlay
           if (_isTranscribing) _buildTranscribingOverlay(),

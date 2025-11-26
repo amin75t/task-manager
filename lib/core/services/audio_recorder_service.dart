@@ -80,8 +80,28 @@ class AudioRecorderService {
     }
   }
 
+  Future<void> pauseRecording() async {
+    try {
+      await _recorder.pauseRecorder();
+    } catch (e) {
+      print('Error pausing recording: $e');
+    }
+  }
+
+  Future<void> resumeRecording() async {
+    try {
+      await _recorder.resumeRecorder();
+    } catch (e) {
+      print('Error resuming recording: $e');
+    }
+  }
+
   Future<bool> isRecording() async {
     return _recorder.isRecording;
+  }
+
+  bool isRecorderPaused() {
+    return _recorder.isPaused;
   }
 
   Future<void> cancelRecording() async {
