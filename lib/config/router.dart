@@ -3,6 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:task_manager/features/home/presentation/pages/add_task_page.dart';
 import 'package:task_manager/features/home/presentation/pages/chat_page.dart';
 import 'package:task_manager/features/home/presentation/pages/home_page.dart';
+import 'package:task_manager/features/home/presentation/pages/settings_page.dart';
+import 'package:task_manager/features/settings/categories_settings_page.dart';
+import 'package:task_manager/features/settings/priority_settings_page.dart';
+import 'package:task_manager/features/settings/tags_settings_page.dart';
 import 'package:task_manager/features/home/presentation/pages/task_detail_page.dart';
 import 'package:task_manager/features/home/presentation/pages/tasks_page.dart';
 import 'package:task_manager/features/home/presentation/widgets/custom_bottom_nav_bar.dart';
@@ -14,6 +18,10 @@ class AppRoutes {
   static const String chat = 'chat';
   static const String taskDetail = 'task-detail';
   static const String addTask = 'add-task';
+  static const String settings = 'settings';
+  static const String categoriesSettings = 'categories-settings';
+  static const String prioritySettings = 'priority-settings';
+  static const String tagsSettings = 'tags-settings';
 }
 
 class AppPaths {
@@ -23,6 +31,10 @@ class AppPaths {
   static const String chat = '/chat';
   static const String taskDetail = '/tasks/:id';
   static const String addTask = '/add-task';
+  static const String settings = '/settings';
+  static const String categoriesSettings = '/settings/categories';
+  static const String prioritySettings = '/settings/priority';
+  static const String tagsSettings = '/settings/tags';
 }
 
 // Global key for navigator
@@ -91,6 +103,31 @@ final GoRouter appRouter = GoRouter(
       path: AppPaths.addTask,
       name: AppRoutes.addTask,
       builder: (context, state) => const AddTaskPage(),
+    ),
+    // Settings routes
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: AppPaths.settings,
+      name: AppRoutes.settings,
+      builder: (context, state) => const SettingsPage(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: AppPaths.categoriesSettings,
+      name: AppRoutes.categoriesSettings,
+      builder: (context, state) => const CategoriesSettingsPage(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: AppPaths.prioritySettings,
+      name: AppRoutes.prioritySettings,
+      builder: (context, state) => const PrioritySettingsPage(),
+    ),
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: AppPaths.tagsSettings,
+      name: AppRoutes.tagsSettings,
+      builder: (context, state) => const TagsSettingsPage(),
     ),
   ],
   errorBuilder: (context, state) => const ErrorPage(),

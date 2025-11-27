@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:task_manager/config/theme/app_colors.dart';
 import 'package:task_manager/core/services/audio_recorder_service.dart';
 import 'package:task_manager/core/services/whisper_service.dart';
@@ -40,13 +41,15 @@ class _HomePageState extends State<HomePage>
 
     _animationController = controller;
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
+    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeInOut));
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeInOut),
-    );
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.3,
+    ).animate(CurvedAnimation(parent: controller, curve: Curves.easeInOut));
 
     _initializeWhisper();
   }
@@ -143,10 +146,102 @@ class _HomePageState extends State<HomePage>
     });
   }
 
+  Future<void> _showStopRecordingDialog() async {
+    final shouldTranscribe = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 5),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 15),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundDark,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Have you finished recording? Would\nyou like to transcribe it now?',
+                  textAlign: TextAlign.start,
+                  style: TextStyle(
+                    color: AppColors.textLight,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Transcribe Now button
+                SizedBox(
+                  width: 285,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Transcribe Now',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Not Yet button
+                SizedBox(
+                  width: 285,
+                  height: 50,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(false);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accent,
+                      side: const BorderSide(color: AppColors.accent, width: 1.5),
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Not Yet',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (shouldTranscribe == true) {
+      await _stopRecording();
+    }
+  }
+
   Future<void> _stopRecording() async {
     final path = await _recorderService.stopRecording();
     setState(() {
       _isRecording = false;
+      _isPaused = false;
     });
 
     if (path != null) {
@@ -295,24 +390,27 @@ class _HomePageState extends State<HomePage>
                   ),
                 // Center button
                 const SizedBox(height: 60),
-                Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.backgroundDark,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.accent.withOpacity(0.3),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.mic,
-                    size: 80,
-                    color: AppColors.textLight,
+                GestureDetector(
+                  onTap: _showStopRecordingDialog,
+                  child: Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.backgroundDark,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.accent.withOpacity(0.3),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.mic,
+                      size: 80,
+                      color: AppColors.textLight,
+                    ),
                   ),
                 ),
               ],
@@ -348,11 +446,7 @@ class _HomePageState extends State<HomePage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.auto_awesome,
-                size: 60,
-                color: AppColors.accent,
-              ),
+              const Icon(Icons.auto_awesome, size: 60, color: AppColors.accent),
               const SizedBox(height: 24),
               const Text(
                 'Transcribing Audio...',
@@ -389,10 +483,7 @@ class _HomePageState extends State<HomePage>
               const SizedBox(height: 8),
               const Text(
                 'AI is processing your voice...',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textLight,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textLight),
               ),
             ],
           ),
@@ -403,23 +494,53 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDarker,
-      appBar: AppBar(
+    return PopScope(
+      canPop: !_isTranscribing,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _isTranscribing) {
+          // Prevent back during transcription
+          return;
+        }
+        if (!didPop && _transcription.isNotEmpty) {
+          // Clear transcription on back
+          setState(() {
+            _transcription = '';
+            _recordingPath = null;
+          });
+        }
+      },
+      child: Scaffold(
         backgroundColor: AppColors.backgroundDarker,
-        elevation: 0,
-
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.settings_outlined,
-              color: AppColors.textLight,
+        appBar: AppBar(
+          backgroundColor: AppColors.backgroundDarker,
+          elevation: 0,
+          leading: _transcription.isNotEmpty && !_isTranscribing
+              ? IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: AppColors.textLight,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _transcription = '';
+                      _recordingPath = null;
+                    });
+                  },
+                )
+              : null,
+          centerTitle: false,
+          actions: [
+            IconButton(
+              icon: const Icon(
+                Icons.settings_outlined,
+                color: AppColors.textLight,
+              ),
+              onPressed: () {
+                GoRouter.of(context).push('/settings');
+              },
             ),
-            onPressed: () {},
-          ),
-        ],
-      ),
+          ],
+        ),
       body: Stack(
         children: [
           Column(
@@ -623,6 +744,7 @@ class _HomePageState extends State<HomePage>
               ),
             ),
         ],
+      ),
       ),
     );
   }
