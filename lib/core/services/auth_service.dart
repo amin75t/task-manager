@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:task_manager/core/api/api_client.dart';
 import 'package:task_manager/core/api/models/auth_models.dart';
 import 'package:task_manager/core/api/providers/auth_provider.dart';
@@ -92,18 +93,21 @@ class AuthService {
         return;
       }
 
-      print('🔐 [AuthService] Token found - verifying with /auth/me endpoint...');
+      print(
+        '🔐 [AuthService] Token found - verifying with /auth/me endpoint...',
+      );
 
       // Token exists - try to get user profile
       final user = await _authProvider.getCurrentUser();
 
       // Successfully got user profile - user is authenticated
-      print('🔐 [AuthService] ✅ Authentication successful!');
-      print('🔐 [AuthService] User ID: ${user.userId}');
-      print('🔐 [AuthService] Phone: ${user.phone}');
-      print('🔐 [AuthService] Created At: ${user.createdAt}');
-      print('🔐 [AuthService] Updated At: ${user.updatedAt}');
-
+      if (kDebugMode) {
+        print('🔐 [AuthService] ✅ Authentication successful!');
+        print('🔐 [AuthService] User ID: ${user.userId}');
+        print('🔐 [AuthService] Phone: ${user.phone}');
+        print('🔐 [AuthService] Created At: ${user.createdAt}');
+        print('🔐 [AuthService] Updated At: ${user.updatedAt}');
+      }
       _updateState(AuthState.authenticated(user: user, token: token));
     } catch (e) {
       // Failed to get user profile - token might be invalid
@@ -111,9 +115,11 @@ class AuthService {
       print('🔐 [AuthService] Clearing invalid token...');
 
       await _tokenService.clearToken();
-      _updateState(AuthState.unauthenticated(
-        errorMessage: 'Session expired. Please login again.',
-      ));
+      _updateState(
+        AuthState.unauthenticated(
+          errorMessage: 'Session expired. Please login again.',
+        ),
+      );
     }
   }
 
@@ -193,17 +199,14 @@ class AuthService {
       print('🔐 [AuthService] User phone: ${user.phone}');
 
       // Update state to authenticated
-      _updateState(AuthState.authenticated(
-        user: user,
-        token: tokenResponse.accessToken,
-      ));
+      _updateState(
+        AuthState.authenticated(user: user, token: tokenResponse.accessToken),
+      );
 
       return user;
     } catch (e) {
       print('🔐 [AuthService] ❌ Login failed: $e');
-      _updateState(AuthState.unauthenticated(
-        errorMessage: e.toString(),
-      ));
+      _updateState(AuthState.unauthenticated(errorMessage: e.toString()));
       rethrow;
     }
   }
