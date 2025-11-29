@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:task_manager/features/chat/presentation/pages/chat_page.dart';
 import 'package:task_manager/features/home/presentation/pages/add_task_page.dart';
-import 'package:task_manager/features/home/presentation/pages/chat_page.dart';
 import 'package:task_manager/features/home/presentation/pages/home_page.dart';
-import 'package:task_manager/features/home/presentation/pages/settings_page.dart';
+import 'package:task_manager/features/settings/settings_page.dart';
 import 'package:task_manager/features/settings/categories_settings_page.dart';
 import 'package:task_manager/features/settings/priority_settings_page.dart';
 import 'package:task_manager/features/settings/tags_settings_page.dart';
-import 'package:task_manager/features/home/presentation/pages/task_detail_page.dart';
-import 'package:task_manager/features/home/presentation/pages/tasks_page.dart';
+import 'package:task_manager/features/tasks/presentation/task_detail_page.dart';
+import 'package:task_manager/features/tasks/presentation/tasks_page.dart';
 import 'package:task_manager/features/home/presentation/widgets/custom_bottom_nav_bar.dart';
 
 class AppRoutes {

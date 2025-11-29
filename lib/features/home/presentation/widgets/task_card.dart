@@ -6,39 +6,24 @@ import 'package:task_manager/core/models/task_model.dart';
 
 class TaskCard extends StatelessWidget {
   final TaskModel task;
-  final VoidCallback? onToggleComplete;
 
   const TaskCard({
     super.key,
     required this.task,
-    this.onToggleComplete,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.backgroundDark,
-            AppColors.backgroundDark.withOpacity(0.95),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: task.isCompleted
-              ? AppColors.success.withOpacity(0.3)
-              : AppColors.textLight.withOpacity(0.12),
-          width: 1.5,
-        ),
+        color: AppColors.backgroundDarker,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -51,59 +36,33 @@ class TaskCard extends StatelessWidget {
               pathParameters: {'id': task.id},
             );
           },
-          borderRadius: BorderRadius.circular(20),
-          splashColor: AppColors.accent.withOpacity(0.1),
-          highlightColor: AppColors.accent.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Category and Priority row
+                // Category/Theme chip and tags row
                 Row(
                   children: [
                     // Category chip
                     if (task.category != null)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 7,
+                          horizontal: 12,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              _getCategoryColor(task.category!),
-                              _getCategoryColor(task.category!).withOpacity(0.8),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _getCategoryColor(task.category!).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                          color: _getCategoryColor(task.category!),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _getCategoryIcon(task.category!),
-                              size: 14,
-                              color: AppColors.surfaceWhite,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              task.category!,
-                              style: const TextStyle(
-                                color: AppColors.surfaceWhite,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          task.category!,
+                          style: const TextStyle(
+                            color: AppColors.surfaceWhite,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     const Spacer(),
@@ -111,193 +70,85 @@ class TaskCard extends StatelessWidget {
                     _buildPriorityIndicator(task.priority),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // Task title with checkbox
-                Row(
-                  children: [
-                    // Checkbox
-                    GestureDetector(
-                      onTap: onToggleComplete,
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        margin: const EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
-                          color: task.isCompleted
-                              ? AppColors.success
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: task.isCompleted
-                                ? AppColors.success
-                                : AppColors.textLight.withOpacity(0.4),
-                            width: 2.5,
-                          ),
-                          boxShadow: task.isCompleted
-                              ? [
-                                  BoxShadow(
-                                    color: AppColors.success.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: task.isCompleted
-                            ? const Icon(
-                                Icons.check_rounded,
-                                size: 18,
-                                color: AppColors.surfaceWhite,
-                              )
-                            : null,
-                      ),
-                    ),
-                    // Title
-                    Expanded(
-                      child: Text(
-                        task.title,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: task.isCompleted
-                              ? AppColors.textLight.withOpacity(0.6)
-                              : AppColors.textLight,
-                          decoration: task.isCompleted
-                              ? TextDecoration.lineThrough
-                              : TextDecoration.none,
-                          decorationColor: AppColors.textLight.withOpacity(0.5),
-                          decorationThickness: 2,
-                          height: 1.4,
-                          letterSpacing: 0.2,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                // Task title
+                Text(
+                  task.title,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.surfaceWhite,
+                    decoration: task.isCompleted
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
+                    decorationColor: AppColors.surfaceWhite.withOpacity(0.6),
+                    decorationThickness: 2,
+                    height: 1.3,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
 
                 // Tags
                 if (task.tags != null && task.tags!.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    height: 32,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: task.tags!.length > 3 ? 4 : task.tags!.length,
-                      separatorBuilder: (context, index) => const SizedBox(width: 8),
-                      itemBuilder: (context, index) {
-                        if (index == 3 && task.tags!.length > 3) {
-                          // Show +N more indicator
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.textLight.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '+${task.tags!.length - 3}',
-                                style: TextStyle(
-                                  color: AppColors.textLight.withOpacity(0.7),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-
-                        final tag = task.tags![index];
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: task.tags!.map((tag) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.accent.withOpacity(0.4),
+                            width: 1,
                           ),
-                          decoration: BoxDecoration(
-                            color: AppColors.accent.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.accent.withOpacity(0.4),
-                              width: 1.2,
-                            ),
+                        ),
+                        child: Text(
+                          '#$tag',
+                          style: TextStyle(
+                            color: AppColors.accent.withOpacity(0.95),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.tag,
-                                size: 12,
-                                color: AppColors.accent,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                tag,
-                                style: const TextStyle(
-                                  color: AppColors.accent,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
 
                 // Due date if present
                 if (task.dueDate != null) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _isOverdue(task.dueDate!)
-                          ? AppColors.error.withOpacity(0.1)
-                          : AppColors.info.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 14,
                         color: _isOverdue(task.dueDate!)
-                            ? AppColors.error.withOpacity(0.4)
-                            : AppColors.info.withOpacity(0.3),
-                        width: 1,
+                            ? AppColors.error
+                            : AppColors.surfaceWhite.withOpacity(0.7),
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isOverdue(task.dueDate!)
-                              ? Icons.warning_amber_rounded
-                              : Icons.schedule_rounded,
-                          size: 16,
+                      const SizedBox(width: 6),
+                      Text(
+                        _formatDueDate(task.dueDate!),
+                        style: TextStyle(
+                          fontSize: 12,
                           color: _isOverdue(task.dueDate!)
                               ? AppColors.error
-                              : AppColors.info,
+                              : AppColors.surfaceWhite.withOpacity(0.7),
+                          fontWeight: _isOverdue(task.dueDate!)
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _formatDueDate(task.dueDate!),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _isOverdue(task.dueDate!)
-                                ? AppColors.error
-                                : AppColors.info,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ],
@@ -311,83 +162,56 @@ class TaskCard extends StatelessWidget {
   Widget _buildPriorityIndicator(TaskPriority priority) {
     Color priorityColor;
     String priorityLabel;
-    IconData priorityIcon;
 
     switch (priority) {
       case TaskPriority.urgent:
         priorityColor = AppColors.error;
         priorityLabel = 'Urgent';
-        priorityIcon = Icons.priority_high;
         break;
       case TaskPriority.high:
         priorityColor = AppColors.warning;
         priorityLabel = 'High';
-        priorityIcon = Icons.arrow_upward;
         break;
       case TaskPriority.medium:
         priorityColor = AppColors.info;
         priorityLabel = 'Medium';
-        priorityIcon = Icons.remove;
         break;
       case TaskPriority.low:
         priorityColor = AppColors.success;
         priorityLabel = 'Low';
-        priorityIcon = Icons.arrow_downward;
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: priorityColor.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: priorityColor, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: priorityColor.withOpacity(0.2),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: priorityColor.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: priorityColor.withOpacity(0.8), width: 1.2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            priorityIcon,
-            size: 14,
-            color: priorityColor,
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: priorityColor,
+              shape: BoxShape.circle,
+            ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 5),
           Text(
             priorityLabel,
             style: TextStyle(
               color: priorityColor,
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
             ),
           ),
         ],
       ),
     );
-  }
-
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'work':
-        return Icons.work_rounded;
-      case 'personal':
-        return Icons.person_rounded;
-      case 'shopping':
-        return Icons.shopping_cart_rounded;
-      case 'health':
-        return Icons.health_and_safety_rounded;
-      case 'learning':
-        return Icons.school_rounded;
-      default:
-        return Icons.folder_rounded;
-    }
   }
 
   Color _getCategoryColor(String category) {

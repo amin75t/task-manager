@@ -32,22 +32,38 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
   Widget build(BuildContext context) {
     if (_task == null) {
       return Scaffold(
+        backgroundColor: AppColors.backgroundDark,
         appBar: AppBar(
-          title: const Text('Task Detail'),
+          backgroundColor: AppColors.backgroundDark,
+          iconTheme: const IconThemeData(color: AppColors.surfaceWhite),
+          title: const Text(
+            'Task Detail',
+            style: TextStyle(color: AppColors.surfaceWhite),
+          ),
         ),
         body: const Center(
-          child: Text('Task not found'),
+          child: Text(
+            'Task not found',
+            style: TextStyle(color: AppColors.surfaceWhite),
+          ),
         ),
       );
     }
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundDark,
       appBar: AppBar(
-        title: const Text('Task Detail'),
+        backgroundColor: AppColors.backgroundDark,
+        iconTheme: const IconThemeData(color: AppColors.surfaceWhite),
+        title: const Text(
+          'Task Detail',
+          style: TextStyle(color: AppColors.surfaceWhite),
+        ),
         actions: [
           IconButton(
             icon: Icon(
               _task!.isCompleted ? Icons.check_circle : Icons.circle_outlined,
+              color: AppColors.surfaceWhite,
             ),
             onPressed: () async {
               await _taskRepository.toggleTaskCompletion(widget.taskId);
@@ -55,7 +71,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.delete),
+            icon: const Icon(Icons.delete, color: AppColors.surfaceWhite),
             onPressed: () => _showDeleteDialog(context),
           ),
         ],
@@ -75,10 +91,11 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
+                  color: AppColors.surfaceWhite,
                   decoration: _task!.isCompleted
                       ? TextDecoration.lineThrough
                       : TextDecoration.none,
+                  decorationColor: AppColors.surfaceWhite.withOpacity(0.6),
                 ),
               ),
             ),
@@ -97,17 +114,17 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.backgroundLight,
+                        color: AppColors.accent.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: AppColors.accent.withOpacity(0.4),
+                          color: AppColors.accent.withOpacity(0.5),
                           width: 1.5,
                         ),
                       ),
                       child: Text(
                         '#$tag',
-                        style: const TextStyle(
-                          color: AppColors.accent,
+                        style: TextStyle(
+                          color: AppColors.accent.withOpacity(0.95),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -214,7 +231,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
+                  color: AppColors.surfaceWhite,
                 ),
               ),
             ],
@@ -224,18 +241,18 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.backgroundLight.withOpacity(0.5),
+              color: AppColors.backgroundDarker,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColors.accent.withOpacity(0.2),
+                color: AppColors.accent.withOpacity(0.3),
                 width: 1,
               ),
             ),
             child: Text(
               content,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
-                color: AppColors.textDark,
+                color: AppColors.surfaceWhite.withOpacity(0.9),
                 height: 1.5,
               ),
             ),
@@ -262,7 +279,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
+                  color: AppColors.surfaceWhite,
                 ),
               ),
             ],
@@ -273,11 +290,11 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isOverdue
-                  ? AppColors.error.withOpacity(0.1)
-                  : AppColors.backgroundLight.withOpacity(0.5),
+                  ? AppColors.error.withOpacity(0.15)
+                  : AppColors.backgroundDarker,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isOverdue ? AppColors.error : AppColors.accent.withOpacity(0.2),
+                color: isOverdue ? AppColors.error : AppColors.accent.withOpacity(0.3),
                 width: 1.5,
               ),
             ),
@@ -288,7 +305,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: isOverdue ? AppColors.error : AppColors.textDark,
+                    color: isOverdue ? AppColors.error : AppColors.surfaceWhite,
                   ),
                 ),
                 if (isOverdue) ...[
@@ -357,7 +374,7 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
+                  color: AppColors.surfaceWhite,
                 ),
               ),
             ],
@@ -366,9 +383,9 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: priorityColor.withOpacity(0.1),
+              color: priorityColor.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: priorityColor, width: 2),
+              border: Border.all(color: priorityColor.withOpacity(0.8), width: 2),
             ),
             child: Row(
               children: [
@@ -402,21 +419,21 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.accent.withOpacity(0.7), size: 18),
+          Icon(icon, color: AppColors.accent.withOpacity(0.8), size: 18),
           const SizedBox(width: 12),
           Text(
             '$label: ',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.textMedium.withOpacity(0.8),
+              color: AppColors.surfaceWhite.withOpacity(0.7),
             ),
           ),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: AppColors.textMedium,
+              color: AppColors.surfaceWhite.withOpacity(0.8),
             ),
           ),
         ],
@@ -445,11 +462,21 @@ class _TaskDetailPageState extends State<TaskDetailPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: const Text('Are you sure you want to delete this task?'),
+        backgroundColor: AppColors.backgroundDarker,
+        title: const Text(
+          'Delete Task',
+          style: TextStyle(color: AppColors.surfaceWhite),
+        ),
+        content: Text(
+          'Are you sure you want to delete this task?',
+          style: TextStyle(color: AppColors.surfaceWhite.withOpacity(0.9)),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.surfaceWhite,
+            ),
             child: const Text('Cancel'),
           ),
           TextButton(
