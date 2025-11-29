@@ -31,9 +31,15 @@ class AuthService {
   // Current auth state
   AuthState _currentState = const AuthState.initial();
 
+  // Completer for initialization
+  final Completer<void> _initCompleter = Completer<void>();
+
   AuthService(this._authProvider, this._tokenService) {
     _initializeAuthState();
   }
+
+  /// Wait for auth initialization to complete
+  Future<void> get initialized => _initCompleter.future;
 
   // ============================================================================
   // PUBLIC API
@@ -90,6 +96,7 @@ class AuthService {
         // No token found - user is not authenticated
         print('🔐 [AuthService] No token found - user is not authenticated');
         _updateState(const AuthState.unauthenticated());
+        if (!_initCompleter.isCompleted) _initCompleter.complete();
         return;
       }
 
@@ -105,10 +112,12 @@ class AuthService {
         print('🔐 [AuthService] ✅ Authentication successful!');
         print('🔐 [AuthService] User ID: ${user.userId}');
         print('🔐 [AuthService] Phone: ${user.phone}');
+        print('🔐 [AuthService] Data Version: ${user.dataVersion}');
         print('🔐 [AuthService] Created At: ${user.createdAt}');
         print('🔐 [AuthService] Updated At: ${user.updatedAt}');
       }
       _updateState(AuthState.authenticated(user: user, token: token));
+      if (!_initCompleter.isCompleted) _initCompleter.complete();
     } catch (e) {
       // Failed to get user profile - token might be invalid
       print('🔐 [AuthService] ❌ Authentication failed: $e');
@@ -120,6 +129,7 @@ class AuthService {
           errorMessage: 'Session expired. Please login again.',
         ),
       );
+      if (!_initCompleter.isCompleted) _initCompleter.complete();
     }
   }
 

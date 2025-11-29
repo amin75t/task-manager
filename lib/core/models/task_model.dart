@@ -37,6 +37,12 @@ class TaskModel extends HiveObject {
   @HiveField(10)
   List<String>? tags;
 
+  @HiveField(11)
+  int? time; // Estimated time in minutes
+
+  @HiveField(12)
+  bool withAiFlag; // Flag indicating if task was created with AI
+
   TaskModel({
     required this.id,
     required this.title,
@@ -49,6 +55,8 @@ class TaskModel extends HiveObject {
     this.dueDate,
     this.category,
     this.tags,
+    this.time,
+    this.withAiFlag = false,
   });
 
   // Copy with method for easy updates
@@ -64,6 +72,8 @@ class TaskModel extends HiveObject {
     DateTime? dueDate,
     String? category,
     List<String>? tags,
+    int? time,
+    bool? withAiFlag,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -77,6 +87,8 @@ class TaskModel extends HiveObject {
       dueDate: dueDate ?? this.dueDate,
       category: category ?? this.category,
       tags: tags ?? this.tags,
+      time: time ?? this.time,
+      withAiFlag: withAiFlag ?? this.withAiFlag,
     );
   }
 
@@ -94,34 +106,98 @@ class TaskModel extends HiveObject {
       'dueDate': dueDate?.toIso8601String(),
       'category': category,
       'tags': tags,
+      'time': time,
+      'withAiFlag': withAiFlag,
     };
+  }
+
+  // Convert to API format (for server requests)
+  Map<String, dynamic> toApiJson() {
+    return {
+      'title': title,
+      'description': description ?? '',
+      'proprietary': _priorityToApi(priority),
+      'tags': tags ?? [],
+      'time': time ?? 0,
+      'deadline': dueDate?.toIso8601String(),
+      'with_ai_flag': withAiFlag,
+    };
+  }
+
+  // Map priority enum to API format
+  static String _priorityToApi(TaskPriority priority) {
+    switch (priority) {
+      case TaskPriority.low:
+        return 'Low';
+      case TaskPriority.medium:
+        return 'Medium';
+      case TaskPriority.high:
+        return 'High';
+      case TaskPriority.urgent:
+        return 'Urgent';
+    }
+  }
+
+  // Map API priority string to enum
+  static TaskPriority _priorityFromApi(String? priority) {
+    switch (priority?.toLowerCase()) {
+      case 'low':
+        return TaskPriority.low;
+      case 'medium':
+        return TaskPriority.medium;
+      case 'high':
+        return TaskPriority.high;
+      case 'urgent':
+        return TaskPriority.urgent;
+      default:
+        return TaskPriority.medium;
+    }
   }
 
   // Create from JSON (for restore/import)
   factory TaskModel.fromJson(Map<String, dynamic> json) {
+    // Handle both String and int for ID (server returns int, local uses String)
+    String parseId(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      if (value is int) return value.toString();
+      return value.toString();
+    }
+
+    // Handle both created_at and createdAt formats
+    DateTime? parseDateTime(dynamic value) {
+      if (value == null) return null;
+      if (value is DateTime) return value;
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          print('Error parsing date: $value');
+          return null;
+        }
+      }
+      return null;
+    }
+
     return TaskModel(
-      id: json['id'],
-      title: json['title'],
+      id: parseId(json['id']),
+      title: json['title'] ?? '',
       description: json['description'],
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : null,
-      isCompleted: json['isCompleted'] ?? false,
-      completedAt: json['completedAt'] != null
-          ? DateTime.parse(json['completedAt'])
-          : null,
-      priority: TaskPriority.values.firstWhere(
-        (e) => e.name == json['priority'],
-        orElse: () => TaskPriority.medium,
-      ),
-      dueDate: json['dueDate'] != null
-          ? DateTime.parse(json['dueDate'])
-          : null,
+      createdAt: parseDateTime(json['createdAt'] ?? json['created_at']) ?? DateTime.now(),
+      updatedAt: parseDateTime(json['updatedAt'] ?? json['updated_at']),
+      isCompleted: json['isCompleted'] ?? json['is_completed'] ?? false,
+      completedAt: parseDateTime(json['completedAt'] ?? json['completed_at']),
+      priority: json['priority'] != null
+          ? TaskPriority.values.firstWhere(
+              (e) => e.name == json['priority'],
+              orElse: () => TaskPriority.medium,
+            )
+          : _priorityFromApi(json['proprietary']),
+      dueDate: parseDateTime(json['dueDate'] ?? json['deadline']),
       category: json['category'],
-      tags: json['tags'] != null
-          ? List<String>.from(json['tags'])
-          : null,
+      tags: json['tags'] != null ? List<String>.from(json['tags']) : null,
+      time: json['time'] is int ? json['time'] : null,
+      withAiFlag: json['withAiFlag'] ?? json['with_ai_flag'] ?? false,
     );
   }
 

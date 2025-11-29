@@ -96,12 +96,14 @@ class TokenResponse {
 class User {
   final int userId;
   final String phone;
+  final int dataVersion;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
   User({
     required this.userId,
     required this.phone,
+    required this.dataVersion,
     this.createdAt,
     this.updatedAt,
   });
@@ -110,6 +112,7 @@ class User {
     return User(
       userId: json['user_id'] as int,
       phone: json['phone'] as String,
+      dataVersion: json['data_version'] as int,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -122,6 +125,7 @@ class User {
   Map<String, dynamic> toJson() => {
     'user_id': userId,
     'phone': phone,
+    'data_version': dataVersion,
     if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
     if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
   };

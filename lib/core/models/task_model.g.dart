@@ -28,13 +28,15 @@ class TaskModelAdapter extends TypeAdapter<TaskModel> {
       dueDate: fields[8] as DateTime?,
       category: fields[9] as String?,
       tags: (fields[10] as List?)?.cast<String>(),
+      time: fields[11] as int?,
+      withAiFlag: fields[12] as bool? ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, TaskModel obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -56,7 +58,11 @@ class TaskModelAdapter extends TypeAdapter<TaskModel> {
       ..writeByte(9)
       ..write(obj.category)
       ..writeByte(10)
-      ..write(obj.tags);
+      ..write(obj.tags)
+      ..writeByte(11)
+      ..write(obj.time)
+      ..writeByte(12)
+      ..write(obj.withAiFlag);
   }
 
   @override
