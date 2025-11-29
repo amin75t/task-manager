@@ -62,18 +62,9 @@ class _TasksPageState extends State<TasksPage> {
               });
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'all',
-                child: Text('All Tasks'),
-              ),
-              const PopupMenuItem(
-                value: 'pending',
-                child: Text('Pending'),
-              ),
-              const PopupMenuItem(
-                value: 'completed',
-                child: Text('Completed'),
-              ),
+              const PopupMenuItem(value: 'all', child: Text('All Tasks')),
+              const PopupMenuItem(value: 'pending', child: Text('Pending')),
+              const PopupMenuItem(value: 'completed', child: Text('Completed')),
             ],
           ),
           IconButton(
@@ -128,8 +119,8 @@ class _TasksPageState extends State<TasksPage> {
             _filterType == 'completed'
                 ? 'No completed tasks yet!'
                 : _filterType == 'pending'
-                    ? 'No pending tasks!'
-                    : 'No tasks yet!',
+                ? 'No pending tasks!'
+                : 'No tasks yet!',
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -190,25 +181,37 @@ class _TasksPageState extends State<TasksPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem('Total', totalTasks, Icons.list_alt, AppColors.info),
-          Container(
-            width: 1,
-            height: 40,
-            color: AppColors.backgroundDark,
+          _buildSummaryItem(
+            'Total',
+            totalTasks,
+            Icons.list_alt,
+            AppColors.info,
           ),
-          _buildSummaryItem('Pending', pendingTasks, Icons.pending_actions, AppColors.warning),
-          Container(
-            width: 1,
-            height: 40,
-            color: AppColors.backgroundDark,
+          Container(width: 1, height: 40, color: AppColors.backgroundDark),
+          _buildSummaryItem(
+            'Pending',
+            pendingTasks,
+            Icons.pending_actions,
+            AppColors.warning,
           ),
-          _buildSummaryItem('Done', completedTasks, Icons.check_circle, AppColors.success),
+          Container(width: 1, height: 40, color: AppColors.backgroundDark),
+          _buildSummaryItem(
+            'Done',
+            completedTasks,
+            Icons.check_circle,
+            AppColors.success,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryItem(String label, int count, IconData icon, Color color) {
+  Widget _buildSummaryItem(
+    String label,
+    int count,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 26),

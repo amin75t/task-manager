@@ -26,6 +26,7 @@ class _HomePageState extends State<HomePage>
   String _transcription = '';
   String? _recordingPath;
   int _recordingSeconds = 0;
+  bool _isModelDownloaded = false;
 
   AnimationController? _animationController;
   Animation<double>? _scaleAnimation;
@@ -83,12 +84,49 @@ class _HomePageState extends State<HomePage>
       _isInitializing = true;
     });
 
-    await _whisperService.initialize();
+    // Check if model is downloaded before initialization
+    final isDownloaded = await _whisperService.isModelDownloaded();
+    if (mounted) {
+      setState(() {
+        _isModelDownloaded = isDownloaded;
+      });
+    }
+
+    // Start initialization (this will download the model if needed)
+    final initFuture = _whisperService.initialize();
+
+    // Periodically check download status while initializing
+    if (!isDownloaded) {
+      _checkDownloadProgress();
+    }
+
+    await initFuture;
+
+    // Final check after initialization
+    final isDownloadedAfterInit = await _whisperService.isModelDownloaded();
 
     if (mounted) {
       setState(() {
         _isInitializing = false;
+        _isModelDownloaded = isDownloadedAfterInit;
       });
+    }
+  }
+
+  Future<void> _checkDownloadProgress() async {
+    // Check download status every 2 seconds while initializing
+    while (_isInitializing && mounted) {
+      await Future.delayed(const Duration(seconds: 2));
+      if (!_isInitializing || !mounted) break;
+
+      final isDownloaded = await _whisperService.isModelDownloaded();
+      if (mounted && _isModelDownloaded != isDownloaded) {
+        setState(() {
+          _isModelDownloaded = isDownloaded;
+        });
+      }
+
+      if (isDownloaded) break;
     }
   }
 
@@ -255,6 +293,9 @@ class _HomePageState extends State<HomePage>
       _transcriptionProgress = 0;
     });
 
+    // Start checking model download status during transcription
+    _checkModelDownloadDuringTranscription();
+
     final transcription = await _whisperService.transcribe(
       audioPath,
       onProgress: (progress) {
@@ -273,6 +314,9 @@ class _HomePageState extends State<HomePage>
         _transcription = transcription ?? 'Failed to transcribe audio';
       });
 
+      // Check model status one final time after transcription
+      _checkModelStatus();
+
       if (transcription == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -281,6 +325,32 @@ class _HomePageState extends State<HomePage>
           ),
         );
       }
+    }
+  }
+
+  Future<void> _checkModelDownloadDuringTranscription() async {
+    // Check download status every 2 seconds while transcribing
+    while (_isTranscribing && mounted) {
+      await Future.delayed(const Duration(seconds: 2));
+      if (!_isTranscribing || !mounted) break;
+
+      final isDownloaded = await _whisperService.isModelDownloaded();
+      if (mounted && _isModelDownloaded != isDownloaded) {
+        setState(() {
+          _isModelDownloaded = isDownloaded;
+        });
+      }
+
+      if (isDownloaded) break;
+    }
+  }
+
+  Future<void> _checkModelStatus() async {
+    final isDownloaded = await _whisperService.isModelDownloaded();
+    if (mounted && _isModelDownloaded != isDownloaded) {
+      setState(() {
+        _isModelDownloaded = isDownloaded;
+      });
     }
   }
 
@@ -530,6 +600,49 @@ class _HomePageState extends State<HomePage>
               : null,
           centerTitle: false,
           actions: [
+            // Model download status button
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _isModelDownloaded
+                    ? AppColors.success.withOpacity(0.15)
+                    : AppColors.warning.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _isModelDownloaded
+                      ? AppColors.success.withOpacity(0.5)
+                      : AppColors.warning.withOpacity(0.5),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _isModelDownloaded
+                        ? Icons.check_circle
+                        : Icons.download,
+                    color: _isModelDownloaded
+                        ? AppColors.success
+                        : AppColors.warning,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _isModelDownloaded ? 'Model Ready' : 'Not Downloaded',
+                    style: TextStyle(
+                      color: _isModelDownloaded
+                          ? AppColors.success
+                          : AppColors.warning,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12), // Space between model status and settings
             IconButton(
               icon: const Icon(
                 Icons.settings_outlined,
