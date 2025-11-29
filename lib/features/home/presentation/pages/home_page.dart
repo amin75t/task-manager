@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:task_manager/config/theme/app_colors.dart';
 import 'package:task_manager/core/services/audio_recorder_service.dart';
+import 'package:task_manager/core/services/auth_service.dart';
 import 'package:task_manager/core/services/whisper_service.dart';
 import 'package:task_manager/features/home/presentation/widgets/action_button.dart';
+import 'package:task_manager/locator.dart';
 
 class HomePage extends StatefulWidget {
   final String title;
@@ -17,6 +20,7 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   final AudioRecorderService _recorderService = AudioRecorderService();
   final WhisperService _whisperService = WhisperService.instance;
+  final AuthService _authService = locator<AuthService>();
 
   bool _isRecording = false;
   bool _isTranscribing = false;
@@ -130,10 +134,124 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  Future<void> _showLoginRequiredDialog() async {
+    final shouldLogin = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: BoxDecoration(
+              color: AppColors.backgroundDark,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.lock_outline,
+                  size: 60,
+                  color: AppColors.accent,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Login Required',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textLight,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'You need to login to use the recording feature',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textLight,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                // Login button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Login',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Cancel button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(false);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accent,
+                      side: const BorderSide(color: AppColors.accent, width: 1.5),
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (shouldLogin == true) {
+      if (mounted) {
+        context.push('/login');
+      }
+    }
+  }
+
   Future<void> _toggleRecording() async {
     if (_isRecording) {
       await _stopRecording();
     } else {
+      // Check if user is authenticated before starting recording
+      if (!_authService.isAuthenticated) {
+        await _showLoginRequiredDialog();
+        return;
+      }
       await _startRecording();
     }
   }
@@ -351,6 +469,81 @@ class _HomePageState extends State<HomePage>
       setState(() {
         _isModelDownloaded = isDownloaded;
       });
+    }
+  }
+
+  Future<void> _uploadAudio() async {
+    // Check if user is authenticated before uploading
+    if (!_authService.isAuthenticated) {
+      await _showLoginRequiredDialog();
+      return;
+    }
+
+    try {
+      // Pick audio file
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac', 'wma'],
+        allowMultiple: false,
+      );
+
+      if (result == null || result.files.isEmpty) {
+        // User cancelled the picker
+        return;
+      }
+
+      final file = result.files.first;
+      final filePath = file.path;
+
+      if (filePath == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to access the selected file'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Validate file size (max 100MB)
+      final fileSize = file.size;
+      const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+
+      if (fileSize > maxSize) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('File size is too large. Maximum size is 100MB'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Selected: ${file.name}'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+
+      // Transcribe the uploaded audio
+      await _transcribeAudio(filePath);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting file: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -731,7 +924,7 @@ class _HomePageState extends State<HomePage>
                       ActionButton(
                         iconPath: 'assets/icons/upload.svg',
                         label: 'Upload Audio',
-                        onTap: null, // Disabled as per requirements
+                        onTap: _isTranscribing || _isInitializing ? null : _uploadAudio,
                       ),
                       const SizedBox(width: 32),
                       ActionButton(

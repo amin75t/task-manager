@@ -13,9 +13,7 @@ class SendOtpRequest {
 
   SendOtpRequest({required this.phone});
 
-  Map<String, dynamic> toJson() => {
-        'phone': phone,
-      };
+  Map<String, dynamic> toJson() => {'phone': phone};
 }
 
 /// Request model for verifying OTP
@@ -23,15 +21,9 @@ class VerifyOtpRequest {
   final String phone;
   final String otp;
 
-  VerifyOtpRequest({
-    required this.phone,
-    required this.otp,
-  });
+  VerifyOtpRequest({required this.phone, required this.otp});
 
-  Map<String, dynamic> toJson() => {
-        'phone': phone,
-        'otp': otp,
-      };
+  Map<String, dynamic> toJson() => {'phone': phone, 'otp': otp};
 }
 
 // ============================================================================
@@ -62,11 +54,11 @@ class OtpSendResponse {
   }
 
   Map<String, dynamic> toJson() => {
-        'message': message,
-        'is_new_user': isNewUser,
-        'phone': phone,
-        if (otp != null) 'otp': otp,
-      };
+    'message': message,
+    'is_new_user': isNewUser,
+    'phone': phone,
+    if (otp != null) 'otp': otp,
+  };
 }
 
 /// Response model for OTP verification (login)
@@ -93,11 +85,11 @@ class TokenResponse {
   }
 
   Map<String, dynamic> toJson() => {
-        'access_token': accessToken,
-        'token_type': tokenType,
-        'user_id': userId,
-        'phone': phone,
-      };
+    'access_token': accessToken,
+    'token_type': tokenType,
+    'user_id': userId,
+    'phone': phone,
+  };
 }
 
 /// User model
@@ -128,11 +120,11 @@ class User {
   }
 
   Map<String, dynamic> toJson() => {
-        'user_id': userId,
-        'phone': phone,
-        if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
-        if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
-      };
+    'user_id': userId,
+    'phone': phone,
+    if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
+    if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+  };
 }
 
 // ============================================================================
@@ -167,30 +159,28 @@ class AuthState {
 
   /// Initial state
   const AuthState.initial()
-      : status = AuthStatus.checking,
-        user = null,
-        token = null,
-        errorMessage = null;
+    : status = AuthStatus.checking,
+      user = null,
+      token = null,
+      errorMessage = null;
 
   /// Authenticated state
-  const AuthState.authenticated({
-    required this.user,
-    required this.token,
-  })  : status = AuthStatus.authenticated,
-        errorMessage = null;
+  const AuthState.authenticated({required this.user, required this.token})
+    : status = AuthStatus.authenticated,
+      errorMessage = null;
 
   /// Unauthenticated state
   const AuthState.unauthenticated({this.errorMessage})
-      : status = AuthStatus.unauthenticated,
-        user = null,
-        token = null;
+    : status = AuthStatus.unauthenticated,
+      user = null,
+      token = null;
 
   /// Checking state
   const AuthState.checking()
-      : status = AuthStatus.checking,
-        user = null,
-        token = null,
-        errorMessage = null;
+    : status = AuthStatus.checking,
+      user = null,
+      token = null,
+      errorMessage = null;
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
   bool get isUnauthenticated => status == AuthStatus.unauthenticated;

@@ -61,4 +61,8 @@ Future<void> setupLocator() async {
   // Initialize Hive
   await locator<HiveService>().init();
   await locator<HiveService>().openBoxes();
+
+  // Initialize AuthService eagerly to check auth status on app startup
+  // This will call /auth/me endpoint if token exists
+  locator<AuthService>();
 }

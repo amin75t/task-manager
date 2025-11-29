@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:task_manager/features/auth/presentation/pages/login_page.dart';
 import 'package:task_manager/features/chat/presentation/pages/chat_page.dart';
 import 'package:task_manager/features/home/presentation/pages/add_task_page.dart';
 import 'package:task_manager/features/home/presentation/pages/home_page.dart';
@@ -22,6 +23,7 @@ class AppRoutes {
   static const String categoriesSettings = 'categories-settings';
   static const String prioritySettings = 'priority-settings';
   static const String tagsSettings = 'tags-settings';
+  static const String login = 'login';
 }
 
 class AppPaths {
@@ -35,6 +37,7 @@ class AppPaths {
   static const String categoriesSettings = '/settings/categories';
   static const String prioritySettings = '/settings/priority';
   static const String tagsSettings = '/settings/tags';
+  static const String login = '/login';
 }
 
 // Global key for navigator
@@ -128,6 +131,13 @@ final GoRouter appRouter = GoRouter(
       path: AppPaths.tagsSettings,
       name: AppRoutes.tagsSettings,
       builder: (context, state) => const TagsSettingsPage(),
+    ),
+    // Auth routes
+    GoRoute(
+      parentNavigatorKey: _rootNavigatorKey,
+      path: AppPaths.login,
+      name: AppRoutes.login,
+      builder: (context, state) => const LoginPage(),
     ),
   ],
   errorBuilder: (context, state) => const ErrorPage(),
